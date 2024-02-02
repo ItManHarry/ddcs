@@ -1,0 +1,123 @@
+{% extends 'base.html'%}
+{%block title%}快递分拨中心信息系统{%endblock%}
+{%block styles%}
+input {
+    appearance: none;
+    text-align: left;
+    height: 36px;
+    width: 248px;
+    border-radius: 5px;
+    border: 0px solid #fff;
+    padding: 0 8px;
+    outline: 0;
+    letter-spacing: 1px;
+    color: #888;
+    font-weight: 200;
+    background: #fff;
+    border: 1px solid rgba(255,255,255,.15);
+    box-shadow: 0 2px 3px 0 rgba(0,0,0,.1) inset;
+    text-shadow: 0 1px 2px rgba(0,0,0,.1);
+    -o-transition: all .2s;
+    -moz-transition: all .2s;
+    -webkit-transition: all .2s;
+    -ms-transition: all .2s;
+}
+input {
+    box-shadow: 0 0 5px 4px rgba(0, 0, 0,0.1);
+}
+{%endblock%}
+{%block content%}
+<ul class="nav nav-underline" id="sysTab" role="tablist" style="border-bottom:1px solid #ccc">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home-tab-pane" type="button" role="tab" aria-controls="home-tab-pane" aria-selected="true"><small>主页</small></button>
+  </li>
+</ul>
+<div class="tab-content" id="sysTabContent">
+    <div class="tab-pane fade show active" id="home-tab-pane" role="tabpanel" aria-labelledby="home-tab" tabindex="0">
+        <div class="ratio ratio-21x9">
+          <iframe src="{%url 'home'%}" allowfullscreen></iframe>
+        </div>
+    </div>
+</div>
+{%endblock%}
+{%block scripts%}
+    {{block.super}}
+    $(function(){
+        $('#f_code').keypress(function(event){
+            var code = $(this).val()
+            if (event.keyCode == 13)
+                $.post('/func/', {code: code}, function(data){
+                    if(data.code == 0)
+                        $.alert({
+                           type:'red',
+                           title:'系统提示',
+                           content: data.message,
+                           onClose:function(){}
+                        })
+                    else
+                        add_tab(data.tab.id, data.tab.name, data.tab.url)
+                }, 'json')
+        })
+        //$.post('/sys_sign/json/', {name: 'Harry', age: 35}, function(data){
+            //alert(data.items)
+            //alert(data.status)
+            //alert(data.message)
+        //}, 'json')
+    })
+    /*
+        添加Tab ->
+        参数：
+            id: Tab id
+            name: Tab名称
+            url: 显示内容对应的URL地址
+    */
+    function add_tab(id, name, url){
+        /* 初始化所有的Tab & Tab Pane */
+        $('#sysTab').find('button').each(function(){
+            $(this).removeClass('active')
+        })
+        $('#sysTabContent').children().each(function(){
+            $(this).removeClass('show active')
+        })
+        /* 判断是否存在，不存在添加 */
+        var tab_exist = false
+        $('#sysTab').find('button').each(function(){
+            if($(this).attr('id') == id)
+                tab_exist = true
+        })
+        if(!tab_exist){
+            var tab = "<li class='nav-item' role='presentation'>"+
+                "<button class='nav-link' id='"+id+"' data-bs-toggle='tab' data-bs-target='#"+id+"-pane' type='button' role='tab' aria-controls='profile-tab-pane' aria-selected='false'><small>"+name+"&nbsp;&nbsp;<i class='bi bi-x' onclick=\"close_tab(\'"+id+"\')\"></i></small></button>"+
+                "</li>"
+            var tabContent = "<div class='tab-pane fade' id=\""+id+"-pane\" role=\"tabpanel\" aria-labelledby=\""+id+"\" tabindex=\"0\">"+
+                "<div class='ratio ratio-21x9'>"+
+                "  <iframe src=\""+url+"\" allowfullscreen></iframe>"+
+                "</div></div>"
+            $('#sysTab').append(tab)
+            $('#sysTabContent').append(tabContent)
+        }
+        /* 激活并显示Tab & Tab Pane */
+        $('#'+id).addClass('active')
+        $('#'+id+'-pane').addClass('show active')
+    }
+    /*
+        关闭Tab ->
+        参数：
+            id: 要关闭的Tab id
+    */
+    function close_tab(id){
+        /* 判断要激活的Tab */
+        var tab_ids = []
+        $('#sysTab').find('button').each(function(){
+            tab_ids.push($(this).attr('id'))
+        })
+        /* 获取要激活的Tab id:关闭当前Tab，激活前面的Tab */
+        var close_index = $.inArray(id, tab_ids)
+        var active_id = tab_ids[close_index-1]
+        /* 移除Tab & Tab Pane */
+        $('#'+id).parent().remove()
+        $('#'+id+'-pane').remove()
+        /* 激活并显示Tab & Tab Pane, 触发click即可 */
+        $('#'+active_id).click()
+    }
+{%endblock%}

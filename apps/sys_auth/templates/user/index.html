@@ -1,0 +1,177 @@
+{% extends 'base.html'%}
+{%block title%}&nbsp;{%endblock%}
+{%block header%}&nbsp;{%endblock%}
+{%block content%}
+<div class="row">
+    <div class="col text-end">
+        <a href="{%url 'sys_auth:user_add'%}" class="btn btn-outline-primary btn-sm"><i class="bi bi-plus-lg"></i>&nbsp;新增</a>
+    </div>
+</div><br>
+<table class="table table-hover">
+    <thead>
+        <tr>
+            <th width="10%">登录账号</th>
+            <th width="20%">用户姓名</th>
+            <th width="20%">邮箱地址</th>
+            <th width="10%">电话号码</th>
+            <th width="10%" class="text-center">超级管理员</th>
+            <th width="10%" class="text-center">状态</th>
+            <th width="20%" class="text-center">Action</th>
+        </tr>
+    </thead>
+    <tbody>
+    {%if users%}
+    {%for user in users%}
+        <tr>
+            <td>{{user.username}}</td>
+            <td>{%if user.is_staff%}{{user.employee.name}}{%else%}{{user.last_name}}{{user.first_name}}{%endif%}</td>
+            <td>{{user.email}}</td>
+            <td>{%if user.is_staff%}{{user.employee.phone}}{%else%}-{%endif%}</td>
+            <td class="text-center">{%if user.is_superuser%}<span class="text-warning">Y</span>{%else%}<span class="text-success">N</span>{%endif%}</td>
+            <td class="text-center">{%if user.is_active%}<span class="text-success">在用</span>{%else%}<span class="text-danger">停用</span>{%endif%}</td>
+            <td class="text-center">
+                <a href="{%url 'sys_auth:user_edit' user.id%}" class="btn btn-link text-info" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="left" data-bs-content="编辑"><i class="bi bi-pencil-square"></i></a>
+                <button class="btn btn-link text-success" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="left" data-bs-content="权限" onclick="auth({{user.id}})"><i class="bi bi-mortarboard"></i></button>
+                <button class="btn btn-link text-warning" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="left" data-bs-content="重置密码" onclick="reset_pwd({{user.id}})" {%if not user.is_active%}disabled{%endif%}><i class="bi bi-unlock"></i></button>
+                <button class="btn btn-link text-danger {%if not user.is_active or user.username == 'admin' or user.username == request.session.username%}disabled{%endif%}" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="left" data-bs-content="停用" onclick="status('{{user.id}}', 0)"><i class="bi bi-x-circle"></i></button>&nbsp;
+                <button class="btn btn-link text-success {%if user.is_active or user.username == 'admin' or user.username == request.session.username%}disabled{%endif%}" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="left" data-bs-content="启用" onclick="status('{{user.id}}', 1)"><i class="bi bi-check-circle"></i></button>
+            </td>
+        </tr>
+    {%endfor%}
+    {%else%}
+    <tr>
+        <td colspan="7" class="text-info text-center">没有数据！</td>
+    </tr>
+    {%endif%}
+    </tbody>
+</table>
+{%include 'common/paginator.html'%}
+{%include './_roles.html'%}
+{%include './_pwd.html'%}
+{%endblock%}
+{%block scripts%}
+    {{block.super}}
+    var user_id = 0
+    function auth(id){
+        user_id = id
+        $.post('/sys_auth/role/user/'+id, {user_id: id}, function(data){
+            $('#for_select').empty()
+            $('#selected').empty()
+            var for_select = data.for_select, selected = data.selected
+            for(var i = 0; i < for_select.length; i++){
+                $('#for_select').append("<option value='"+for_select[i][0]+"'>"+for_select[i][1]+"</option>")
+            }
+            for(var i = 0; i < selected.length; i++){
+                $('#selected').append("<option value='"+selected[i][0]+"'>"+selected[i][1]+"</option>")
+            }
+            $('#roleModal').modal('show')
+        },'json')
+    }
+    function do_move(action){
+        var option = null
+        if(action == 1){    //若为1执行增加审批人
+            $('#for_select option').each(function(){
+                if($(this).is(':checked')){
+                    $('#selected').append("<option value='"+$(this).val()+"'>"+$(this).text()+"</option>")
+                    $(this).remove()
+                }
+            })
+        }else{              //若为0执行移除审批人
+            $('#selected option').each(function(){
+                if($(this).is(':checked')){
+                    $('#for_select').append("<option value='"+$(this).val()+"'>"+$(this).text()+"</option>")
+                    $(this).remove()
+                }
+            })
+        }
+    }
+    function do_save(){
+        var roles = []
+        $('#selected option').each(function(){
+            roles.push($(this).val())
+        })
+        if(roles.length == 0)
+            $.alert({
+               type:'red',
+               title:'系统提示',
+               content: '请添加系统权限！',
+               onClose:function(){}
+            })
+        else
+            $.post('/sys_auth/user/role/'+user_id, {roles: JSON.stringify(roles)}, function(data){
+                $.alert({
+                   type:'green',
+                   title:'系统提示',
+                   content: data.message,
+                   onClose:function(){
+                       $('#roleModal').modal('hide')
+                   }
+                })
+            }, 'json')
+    }
+    function reset_pwd(id){
+        user_id = id
+        $('#new_pwd').val('')
+        $('#confirm_pwd').val('')
+        $('#pwdModal').modal('show')
+    }
+    function do_reset(){
+        if($.trim($('#new_pwd').val()) == ''){
+            $.alert({
+               type:'red',
+               title:'系统提示',
+               content: '请输入新密码！',
+               onClose:function(){}
+            })
+        }else if($.trim($('#confirm_pwd').val()) == ''){
+            $.alert({
+               type:'red',
+               title:'系统提示',
+               content: '请确认新密码！',
+               onClose:function(){}
+            })
+        }else if($('#new_pwd').val() != $('#confirm_pwd').val()){
+            $.alert({
+               type:'red',
+               title:'系统提示',
+               content: '两次输入密码不一致！',
+               onClose:function(){}
+            })
+        }else{
+            $.post('/sys_auth/user/pwd/reset/'+user_id, {pwd:$('#new_pwd').val()}, function(data){
+                $.alert({
+                   type:'green',
+                   title:'系统提示',
+                   content: data.message,
+                   onClose:function(){
+                        if(data.code == 1)
+                            $('#pwdModal').modal('hide')
+                        else
+                            window.top.location = '{%url 'sys_sign:login'%}'
+                   }
+                })
+            }, 'json')
+        }
+    }
+    function status(id, status){
+        $.ajax({
+            type:'post',
+            url:'/sys_auth/user/status/'+id+'/'+status,
+            contentType:'application/json;charset=UTF-8',
+            success:function(data){
+                if(data.code == 1)
+                    location.reload()
+            },
+            error:function(){
+                $.alert({
+                   type:'red',
+                   title:'系统提示',
+                   content: '系统错误,请联系管理员',
+                   onClose:function(){
+
+                   }
+               })
+            }
+        })
+    }
+{%endblock%}

@@ -1,0 +1,72 @@
+{% extends 'base.html'%}
+{%block title%}系统登录{%endblock%}
+{%block header%}&nbsp;{%endblock%}
+{%block content%}
+<div class="row">
+    <div class="col-md-4 offset-md-4 text-center">
+        <form action="{%url 'sys_sign:login'%}" method="post">
+            {% csrf_token %}
+<!--            <input type="hidden" name="next" value="{{next}}">-->
+            <h1 class="h3 mb-3 fw-normal">Please sign in</h1>
+            <div class="form-floating">
+              <input type="text" class="form-control" name="username" id="username" placeholder="User name ...">
+              <label for="username">User Name</label>
+            </div><br>
+            <div class="form-floating">
+              <input type="password" class="form-control" name="password" id="password" placeholder="Password ...">
+              <label for="password">Password</label>
+            </div><br>
+            <div class="form-floating" id="role">
+                <select id="role_id" name="role_id" class="form-control"></select>
+                <label for="role_id">Role</label>
+            </div><br>
+            <div class="form-floating" id="message">
+              {%if login_message%}<small class="text-danger"><i class="bi bi-exclamation-triangle"></i>&nbsp;&nbsp;{{login_message}}</small>{%endif%}
+            </div>
+        </form>
+    </div>
+</div><br>
+<div class="row">
+    <div class="col-md-4 offset-md-4 text-center">
+        <button class="w-100 btn btn-lg btn-primary" id="signin" disabled>Sign in</button>
+    </div>
+</div>
+{%endblock%}
+{%block scripts%}
+{{block.super}}
+$(function(){
+    //alert($('#username').val().length)
+    if($('#username').val().length > 0)
+        get_roles($('#username').val())
+    $('#username').blur(function(){
+        $('#role_id').empty()
+        if($(this).val().length > 0)
+            get_roles($(this).val())
+    })
+    $('#signin').click(function(){
+        if($('#username').val().length == 0){
+            $('#message').html("<small class='text-danger'><i class='bi bi-exclamation-triangle'></i>&nbsp;&nbsp;User name should not be empty!</small>")
+            return
+        }
+        if($('#password').val().length == 0){
+            $('#message').html("<small class='text-danger'><i class='bi bi-exclamation-triangle'></i>&nbsp;&nbsp;Password should not be empty!</small>")
+            return
+        }
+        $('form').submit()
+    })
+})
+function get_roles(username){
+//alert('user is : '+ username)
+    $.post('/sys_sign/roles/', {username: username}, function(data){
+        if(data.code == 0){
+            $('#message').html("<small class='text-danger'><i class='bi bi-exclamation-triangle'></i>&nbsp;&nbsp;User does not exist!</small>")
+        }else{
+            var roles = data.roles
+            //alert(roles)
+            for(var i = 0; i < roles.length; i++)
+                $('#role_id').append("<option value='"+roles[i][0]+"'>"+roles[i][1]+"</option>")
+            $('#signin').removeAttr('disabled')
+        }
+    }, 'json')
+}
+{%endblock%}
