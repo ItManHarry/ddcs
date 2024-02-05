@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'org_com.apps.OrgComConfig',    # 组织模块-公司
     'org_dep.apps.OrgDepConfig',    # 组织模块-部门
     'org_emp.apps.OrgEmpConfig',    # 组织模块-雇员
+    'biz_warehouse.apps.BizWarehouseConfig',    # Master数据模块-仓库
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
